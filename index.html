@@ -6,7 +6,6 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#0b0d10">
 <title>TLDR Drive</title>
-<script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
   :root { --bg:#0b0d10; --panel:#161a20; --text:#eef1f5; --muted:#8a94a3; --accent:#4fb3ff; --skip:#e9897c; --deep:#6cc3a8; }
   * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
@@ -67,8 +66,20 @@
   .taste .t { position:relative; height:10px; background:#222831; border-radius:5px; }
   .taste .t i { position:absolute; top:0; height:100%; border-radius:5px; }
   .taste small { display:block; color:var(--muted); font-size:12px; }
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:0 10px; }
+  .days { display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; }
+  .day { flex:0 0 auto; min-width:64px; padding:8px 6px; border-radius:14px; background:var(--panel); border:2px solid #2a313b; text-align:center; font-size:13px; color:var(--muted); }
+  .day b { display:block; color:var(--text); font-size:15px; font-weight:650; }
+  .day i { display:block; font-style:normal; font-size:16px; margin-top:2px; }
+  .day.done { border-color:var(--deep); } .day.done i { color:var(--deep); }
+  .day.part { border-color:#c9a14a; } .day.part i { color:#c9a14a; }
+  .day.next { border-color:var(--accent); box-shadow:0 0 0 2px var(--accent) inset; }
+  body.arch .day { border-color:#43344f; }
   ul.done { padding-left:18px; } ul.done li { margin:6px 0; } ul.done a { color:var(--accent); }
 </style>
+</head>
+<body>
+
 </head>
 <body>
 
@@ -76,7 +87,7 @@
 <section id="home" class="screen on">
   <h1>TLDR Drive</h1>
   <div class="seg" id="modeSeg">
-    <button data-mode="unread" class="on">Unread</button>
+    <button data-mode="new" class="on">New</button>
     <button data-mode="archive">Archive</button>
   </div>
   <div class="seg seg3" id="srcSeg" aria-label="Which newsletters">
@@ -85,17 +96,21 @@
     <button data-src="both">Both</button>
   </div>
   <div id="archOpts" style="display:none">
-    <label for="archRange" style="margin-top:0">Newsletter emails from</label>
-    <select id="archRange"></select>
+    <label for="archDate" style="margin-top:0">Start from</label>
+    <select id="archDate"></select>
   </div>
-  <h2>How long is the drive?</h2>
+  <h2>How much news?</h2>
   <div class="durs">
-    <button data-min="5">5<small>min</small></button>
-    <button data-min="10" class="sel">10<small>min</small></button>
-    <button data-min="15">15<small>min</small></button>
+    <button data-days="1" class="sel">1<small>day</small></button>
+    <button data-days="2">2<small>days</small></button>
+    <button data-days="3">3<small>days</small></button>
   </div>
+  <div class="hint" id="durHint" style="min-height:1.3em"></div>
   <button class="go" id="btnStart">▶ Start briefing</button>
   <div class="status" id="homeStatus"></div>
+  <h2>Recent days</h2>
+  <div class="days" id="dayStrip"><span class="hint">Loading…</span></div>
+  <div class="hint">✓ listened · ◐ partly heard</div>
   <div style="margin-top:auto;display:flex;justify-content:space-between">
     <button class="link" id="btnDemo">Try demo (no accounts)</button>
     <button class="link" id="btnSettings">Settings</button>
@@ -104,7 +119,7 @@
 
 <!-- PLAYER -->
 <section id="player" class="screen">
-  <div class="meta"><span><span class="modetag" id="pMode">Archive · </span><span id="pCount">Story 1</span></span><span id="pTime">0:00 / 10:00</span></div>
+  <div class="meta"><span><span class="modetag" id="pMode">Archive · </span><span id="pCount">Story 1</span></span><span id="pTime">0:00</span></div>
   <div class="bar"><i id="pBar"></i></div>
   <div class="card">
     <div class="tag" id="pTag">Preparing</div>
@@ -135,8 +150,7 @@
 <!-- SETTINGS -->
 <section id="settings" class="screen">
   <h1>Settings</h1>
-  <p class="hint">Stored only on this device (localStorage). See README for how to get each value.</p>
-  <label>Google OAuth Client ID (already filled in; only change it if you make your own)</label><input id="sGoogle" autocomplete="off">
+  <p class="hint">Stored only on this device. See the README for how to get each key.</p>
   <label>Anthropic API key</label><input id="sAnthropic" type="password" autocomplete="off">
   <label>Claude model</label><input id="sModel">
   <label>OpenAI API key (natural voice; leave blank to use the phone's built-in voice)</label><input id="sOpenAI" type="password" autocomplete="off">
@@ -146,15 +160,9 @@
   <div class="status" id="voiceStatus"></div>
   <label>Speaking speed</label>
   <select id="sSpeed"><option value="1">1.0×</option><option value="1.1">1.1×</option><option value="1.2">1.2×</option><option value="1.35">1.35×</option></select>
-  <label>Newsletters to include</label>
-  <div id="sSources" class="srcs"></div>
-  <label>Other senders (optional, comma-separated email addresses)</label><input id="sExtra" placeholder="e.g. news@morningbrew.com" autocomplete="off">
-  <label>After the drive, mark emails as read</label>
-  <select id="sMark">
-    <option value="covered">Only emails whose stories were all heard or skipped</option>
-    <option value="all">All fetched newsletter emails</option>
-    <option value="never">Never</option>
-  </select>
+  <label>TLDR editions (from tldr.tech)</label>
+  <div id="sEditions" class="srcs grid2"></div>
+  <p class="hint">Each edition adds about 10 stories a day. Robinhood Snacks is switched on and off with the TLDR / Snacks / Both buttons on the home screen.</p>
   <label>What you care about (helps ranking)</label><input id="sInterests" placeholder="e.g. AI agents, chips, startups; not crypto">
   <button class="go" id="btnSave" style="margin-top:16px">Save</button>
   <h2 style="margin-top:18px">Set up another phone</h2>
@@ -165,6 +173,7 @@
     <button class="link" id="btnCopyLink">Copy setup link instead</button>
   </div>
   <button class="link" id="btnForget">Clear list of already-heard stories</button>
+  <button class="link" id="btnForgetDays">Clear listened days</button>
   <h2 style="margin-top:18px">What I've learned from your skips</h2>
   <p class="hint">Skipping early counts as "not interested"; finishing a story is a mild yes; Go deeper is a strong yes. Recent behaviour counts more (30-day half-life).</p>
   <div id="tastes"></div>
@@ -1439,19 +1448,13 @@ return {QRCode:req('index'),ECL:req('QRErrorCorrectLevel')};})();
 // ---------- config ----------
 const WPM = 165;                   // spoken words per minute at 1.0x
 const DEFAULTS = {
-  google: "269841274471-ca5qvmd2clp7q8denremnne0job3c1ij.apps.googleusercontent.com", anthropic: "", model: "claude-sonnet-5-5", openai: "", voice: "alloy", speed: "1.1",
-  sources: ["tldr", "snacks"], extra: "", mark: "covered", interests: ""
+  anthropic: "", model: "claude-sonnet-5-5", openai: "", voice: "alloy", speed: "1.1",
+  sources: ["tldr", "snacks"], editions: ["tech", "ai"], interests: ""
 };
-const SOURCES = {
-  tldr:   { name: "TLDR (all editions)", from: "tldrnewsletter.com" },
-  snacks: { name: "Robinhood Snacks",    from: "snacks.robinhood.com" }
-};
-function senderFilter() {
-  const froms = (cfg.sources || []).filter(k => SOURCES[k]).map(k => "from:" + SOURCES[k].from)
-    .concat((cfg.extra || "").split(/[,\s]+/).filter(x => x.includes("@") || x.includes(".")).map(x => "from:" + x));
-  return froms.length ? "(" + froms.join(" OR ") + ")" : "from:tldrnewsletter.com";
-}
-const unreadQuery = () => senderFilter() + " is:unread newer_than:7d";
+const EDITIONS = { tech: "Tech (the main TLDR)", ai: "AI", dev: "Dev", infosec: "InfoSec", product: "Product", devops: "DevOps", founders: "Founders",
+                   design: "Design", marketing: "Marketing", crypto: "Crypto", fintech: "Fintech", it: "IT", data: "Data", hardware: "Hardware" };
+const edName = ed => ed === "tech" ? "TLDR" : "TLDR " + (EDITIONS[ed] || ed);
+const SNACKS_LIST = "https://sherwood.news/snacks/newsletters/";
 const SILENT = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=";
 const $ = id => document.getElementById(id);
 const store = {
@@ -1459,11 +1462,12 @@ const store = {
   set(k, v) { try { localStorage.setItem("tldrdrive." + k, JSON.stringify(v)); } catch {} }
 };
 let cfg = Object.assign({}, DEFAULTS, store.get("cfg", {}));
-if (!cfg.google) cfg.google = DEFAULTS.google;
-if (!Array.isArray(cfg.sources)) cfg.sources = DEFAULTS.sources.slice();   // older saved settings had no sources   // the Client ID isn't secret, so it's built in
+if (!Array.isArray(cfg.sources)) cfg.sources = DEFAULTS.sources.slice();
+if (!Array.isArray(cfg.editions) || !cfg.editions.length) cfg.editions = DEFAULTS.editions.slice();
+["google", "extra", "mark"].forEach(k => delete cfg[k]);         // left over from the Gmail version
 
 // ---------- set up another phone (QR / link) ----------
-const SHARE_KEYS = ["google", "anthropic", "model", "openai", "voice", "speed", "sources", "extra", "mark", "interests"];
+const SHARE_KEYS = ["anthropic", "model", "openai", "voice", "speed", "sources", "editions", "interests"];
 const b64u = str => btoa(String.fromCharCode(...new TextEncoder().encode(str))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 const unb64u = str => new TextDecoder().decode(Uint8Array.from(atob(str.replace(/-/g, "+").replace(/_/g, "/")), c => c.charCodeAt(0)));
 function setupLink() {
@@ -1485,38 +1489,41 @@ function drawQR(text) {
     const o = JSON.parse(unb64u(m[1]));
     if (!confirm("Set up TLDR Drive on this phone with the shared keys and settings?")) return;
     SHARE_KEYS.forEach(k => { if (o[k] != null) cfg[k] = o[k]; });
-    // moving from the old address also brings what the app learned (skips, heard stories, replayed archive emails)
-    if (o.move) ["events", "heard", "replayed"].forEach(k => { if (Array.isArray(o.move[k])) store.set(k, o.move[k]); });
+    if (!Array.isArray(cfg.editions) || !cfg.editions.length) cfg.editions = DEFAULTS.editions.slice();
     store.set("cfg", cfg);
+    // moving from the old address also brings what the app learned (skips, heard stories)
+    if (o.move) ["events", "heard"].forEach(k => { if (Array.isArray(o.move[k])) store.set(k, o.move[k]); });
     setTimeout(() => homeStatus("All set. Keys and settings were copied to this phone."), 0);
   } catch (e) { setTimeout(() => homeStatus("That setup link looks damaged. Try scanning again."), 0); }
 })();
 
 // ---------- screens ----------
 function show(id) { document.querySelectorAll(".screen").forEach(s => s.classList.toggle("on", s.id === id)); }
-let minutes = 10;
+const homeStatus = m => $("homeStatus").textContent = m;
+let daysN = 1;
 document.querySelectorAll(".durs button").forEach(b => b.onclick = () => {
   document.querySelectorAll(".durs button").forEach(x => x.classList.remove("sel"));
-  b.classList.add("sel"); minutes = +b.dataset.min;
+  b.classList.add("sel"); daysN = +b.dataset.days; renderDays();
 });
 $("btnSettings").onclick = () => {
-  $("sGoogle").value = cfg.google; $("sAnthropic").value = cfg.anthropic; $("sModel").value = cfg.model;
+  $("sAnthropic").value = cfg.anthropic; $("sModel").value = cfg.model;
   $("sOpenAI").value = cfg.openai; $("sVoice").value = cfg.voice; $("sSpeed").value = cfg.speed;
-  $("sSources").innerHTML = "";
-  for (const [k, v] of Object.entries(SOURCES)) {
+  $("sEditions").innerHTML = "";
+  for (const [k, v] of Object.entries(EDITIONS)) {
     const l = document.createElement("label"), c = document.createElement("input");
-    c.type = "checkbox"; c.value = k; c.checked = cfg.sources.includes(k);
-    l.append(c, v.name); $("sSources").append(l);
+    c.type = "checkbox"; c.value = k; c.checked = cfg.editions.includes(k);
+    l.append(c, v); $("sEditions").append(l);
   }
-  $("sExtra").value = cfg.extra || ""; $("sMark").value = cfg.mark; $("sInterests").value = cfg.interests;
+  $("sInterests").value = cfg.interests;
   $("shareBox").style.display = "none"; $("btnShare").textContent = "Show setup QR code"; $("voiceStatus").textContent = "";
   renderTastes(); show("settings");
 };
 $("btnSave").onclick = () => {
-  cfg = { google: $("sGoogle").value.trim(), anthropic: $("sAnthropic").value.trim(), model: $("sModel").value.trim() || DEFAULTS.model,
+  const eds = [...document.querySelectorAll("#sEditions input:checked")].map(c => c.value);
+  Object.assign(cfg, { anthropic: $("sAnthropic").value.trim(), model: $("sModel").value.trim() || DEFAULTS.model,
           openai: $("sOpenAI").value.trim(), voice: $("sVoice").value, speed: $("sSpeed").value,
-          sources: [...document.querySelectorAll("#sSources input:checked")].map(c => c.value), extra: $("sExtra").value.trim(), mark: $("sMark").value, interests: $("sInterests").value.trim() };
-  store.set("cfg", cfg); renderSrcSeg(); show("home");
+          editions: eds.length ? eds : ["tech"], interests: $("sInterests").value.trim() });
+  store.set("cfg", cfg); show("home"); discover();
 };
 $("btnShare").onclick = () => {
   if (!cfg.anthropic) { alert("Save your Anthropic key on this device first."); return; }
@@ -1531,121 +1538,31 @@ $("btnTestVoice").onclick = async () => {
   if (!key) { st.textContent = "Paste an OpenAI key above first."; return; }
   const save = { openai: cfg.openai, voice: cfg.voice, speed: cfg.speed };
   cfg.openai = key; cfg.voice = $("sVoice").value; cfg.speed = $("sSpeed").value;
-  st.textContent = "Asking OpenAI for a sample\u2026"; ttsError = "";
+  st.textContent = "Asking OpenAI for a sample…"; ttsError = "";
   try {
     const clip = await synth(`Hi, this is the ${cfg.voice} voice. Here's how your briefing will sound.`);
-    st.textContent = "\u2714 Natural voice works. Tap Save to keep these settings.";
+    st.textContent = "✔ Natural voice works. Tap Save to keep these settings.";
     audio.src = clip.url; audio.play().catch(() => {});
-  } catch (e) { st.textContent = "\u2716 Didn't work: " + (ttsError || e.message) + "."; }
+  } catch (e) { st.textContent = "✖ Didn't work: " + (ttsError || e.message) + "."; }
   finally { Object.assign(cfg, save); }
 };
 $("btnResetTastes").onclick = () => { if (confirm("Forget everything learned from your skips?")) { store.set("events", []); renderTastes(); } };
 $("btnForget").onclick = () => { store.set("heard", []); alert("Cleared."); };
-$("btnHome").onclick = () => show("home");
-const homeStatus = m => $("homeStatus").textContent = m;
+$("btnForgetDays").onclick = () => { if (confirm("Mark every day as not listened?")) { store.set("listened", {}); renderDays(); alert("Cleared."); } };
+$("btnHome").onclick = () => { show("home"); renderDays(); };
 
-// ---------- Gmail ----------
-let gToken = null, gTokenAt = 0;
-async function ensureToken() {             // reuse a sign-in for ~50 minutes
-  if (gToken && Date.now() - gTokenAt < 50 * 60e3) return gToken;
-  gToken = await googleToken(); gTokenAt = Date.now(); return gToken;
-}
-function googleToken() {
-  return new Promise((resolve, reject) => {
-    if (!window.google?.accounts?.oauth2) return reject(new Error("Google sign-in script not loaded (check connection)."));
-    const client = google.accounts.oauth2.initTokenClient({
-      client_id: cfg.google,
-      scope: "https://www.googleapis.com/auth/gmail.modify",
-      callback: r => r.error ? reject(new Error(r.error)) : resolve(r.access_token),
-      error_callback: e => reject(new Error(e.message || e.type || "Google sign-in failed"))
-    });
-    client.requestAccessToken({ prompt: "" });
-  });
-}
-async function gmail(path, opts = {}) {
-  const r = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/" + path, {
-    ...opts, headers: { Authorization: "Bearer " + gToken, "Content-Type": "application/json", ...(opts.headers || {}) }
-  });
-  if (!r.ok) throw new Error("Gmail " + r.status + ": " + (await r.text()).slice(0, 200));
-  return r.status === 204 ? null : r.json();
-}
-function b64url(s) {
-  const bin = atob(s.replace(/-/g, "+").replace(/_/g, "/"));
-  return new TextDecoder().decode(Uint8Array.from(bin, c => c.charCodeAt(0)));
-}
-function htmlToText(html) {
-  const d = new DOMParser().parseFromString(html, "text/html");
-  d.querySelectorAll("style,script,head").forEach(n => n.remove());
-  d.querySelectorAll("a[href]").forEach(a => { const h = a.getAttribute("href"); if (/^https?:/.test(h) && a.textContent.trim()) a.append(" <" + h + ">"); });
-  d.querySelectorAll("br,p,div,tr,h1,h2,h3,li").forEach(n => n.append("\n"));
-  return d.body.textContent.replace(/[ \t ]+/g, " ").replace(/\n\s*\n+/g, "\n\n").trim();
-}
-function bodyText(payload) {
-  let plain = "", html = "";
-  (function walk(p) {
-    if (!p) return;
-    if (p.mimeType === "text/plain" && p.body?.data) plain += b64url(p.body.data);
-    else if (p.mimeType === "text/html" && p.body?.data) html += b64url(p.body.data);
-    (p.parts || []).forEach(walk);
-  })(payload);
-  return plain || htmlToText(html);   // TLDR plain text is ~10x smaller; links are numbered [n] with a "Links:" list at the end
-}
-async function fetchEmails(onlyIds) {
-  const ids = onlyIds || ((await gmail("messages?maxResults=15&q=" + encodeURIComponent(unreadQuery()))).messages || []).map(m => m.id);
-  const emails = [];
-  for (const id of ids) {
-    const m = await gmail("messages/" + id + "?format=full");
-    const h = n => (m.payload.headers.find(x => x.name.toLowerCase() === n) || {}).value || "";
-    emails.push({ id, subject: h("subject"), from: h("from"), date: h("date"), text: bodyText(m.payload).slice(0, 30000) });
-  }
-  return emails;
-}
-async function markRead(ids) {
-  if (!ids.length || !gToken) return;
-  await gmail("messages/batchModify", { method: "POST", body: JSON.stringify({ ids, removeLabelIds: ["UNREAD"] }) });
-}
-
-// ---------- archive ----------
-let mode = "unread";
-// Calendar months, not 30-day blocks: "1 month ago" = same date last month up to now,
-// "2 months ago" = the calendar month before that, and so on. Each period starts exactly
-// where the next one ends, so no day is skipped or counted twice (31-day months, February, etc.).
-function monthsBack(k) {                       // local midnight, k calendar months before today
-  const t = new Date(), y = t.getFullYear(), m = t.getMonth() - k;
-  const last = new Date(y, m + 1, 0).getDate(); // days in that month (handles 28/29/30/31)
-  return new Date(y, m, Math.min(t.getDate(), last));
-}
-function period(n) {                           // n = 1, 2, 3...
-  const start = monthsBack(n);
-  const end = n === 1 ? new Date(Date.now() + 864e5) : monthsBack(n - 1);   // exclusive
-  const lastDay = new Date(end.getTime() - 864e5);
-  const f = (d, o) => d.toLocaleDateString(undefined, o);
-  return { start, end,
-           short: `${f(start, { month: "short", day: "numeric" })} – ${f(n === 1 ? new Date() : lastDay, { month: "short", day: "numeric" })}`,
-           spoken: `${f(start, { month: "long", day: "numeric" })} to ${f(n === 1 ? new Date() : lastDay, { month: "long", day: "numeric" })}` };
-}
-function fillRanges() {
-  const sel = $("archRange"), keep = sel.value || "1";
-  sel.innerHTML = "";
-  for (let n = 1; n <= 6; n++) {
-    const o = document.createElement("option");
-    o.value = n; o.textContent = `${n} month${n > 1 ? "s" : ""} ago  (${period(n).short})`;
-    sel.append(o);
-  }
-  sel.value = keep;
-}
-fillRanges();
+// ---------- mode + newsletter picker ----------
+let mode = "new";
 function setMode(m) {
   mode = m;
   document.querySelectorAll("#modeSeg button").forEach(b => b.classList.toggle("on", b.dataset.mode === m));
   document.body.classList.toggle("arch", m === "archive");
   $("archOpts").style.display = m === "archive" ? "block" : "none";
-  if (m === "archive") fillRanges();
   $("btnStart").textContent = m === "archive" ? "▶ Play archive" : "▶ Start briefing";
-  homeStatus("");
+  homeStatus(""); renderDays();
 }
 document.querySelectorAll("#modeSeg button").forEach(b => b.onclick = () => setMode(b.dataset.mode));
-// newsletter picker: TLDR / Snacks / Both (saved, and kept in step with the Settings checkboxes)
+$("archDate").onchange = () => renderDays();
 function srcChoice() {
   const t = cfg.sources.includes("tldr"), n = cfg.sources.includes("snacks");
   return t && n ? "both" : n ? "snacks" : t ? "tldr" : "";
@@ -1653,62 +1570,144 @@ function srcChoice() {
 function renderSrcSeg() { const c = srcChoice(); document.querySelectorAll("#srcSeg button").forEach(b => b.classList.toggle("on", b.dataset.src === c)); }
 document.querySelectorAll("#srcSeg button").forEach(b => b.onclick = () => {
   cfg.sources = b.dataset.src === "both" ? ["tldr", "snacks"] : [b.dataset.src];
-  store.set("cfg", cfg); renderSrcSeg(); homeStatus("");
+  store.set("cfg", cfg); renderSrcSeg(); homeStatus(""); discover();
 });
 renderSrcSeg();
-function archiveQuery(n) {
-  // every TLDR email in the period: inbox or archived, read or unread (Gmail searches All Mail)
-  const p = period(+n), sec = d => Math.floor(d.getTime() / 1000);
-  const base = senderFilter();
-  return `${base} after:${sec(p.start)} before:${sec(p.end)}`;
+
+// ---------- newsletter issues (by date) ----------
+// TLDR: each edition's RSS feed lists its daily issues (tldr.tech/<edition>/YYYY-MM-DD) and can be read straight from the phone.
+// Snacks (now on sherwood.news): the site blocks direct reads, so Claude fetches the issue list; it's cached for 3 hours.
+const dayLabel = (date, long) => new Date(date + "T12:00:00").toLocaleDateString(undefined,
+  long ? { weekday: "long", month: "long", day: "numeric" } : { weekday: "short", month: "short", day: "numeric" });
+async function tldrIssues() {
+  const out = [];
+  await Promise.all(cfg.editions.map(async ed => {
+    try {
+      const r = await fetch("https://tldr.tech/api/rss/" + ed);
+      const x = new DOMParser().parseFromString(await r.text(), "text/xml");
+      x.querySelectorAll("item").forEach(it => {
+        const url = (it.querySelector("link")?.textContent || "").trim(), m = url.match(/\/(\d{4}-\d{2}-\d{2})\/?$/);
+        if (m) out.push({ id: `tldr-${ed}:${m[1]}`, src: "tldr", name: edName(ed), date: m[1], title: (it.querySelector("title")?.textContent || "").trim(), url });
+      });
+    } catch (e) { console.warn("TLDR feed failed", ed, e); }
+  }));
+  return out;
 }
-// pick the emails worth replaying: a month holds ~100 newsletter emails, far more than one drive needs
-async function pickArchiveEmails(range, mins) {
-  const list = await gmail("messages?maxResults=150&q=" + encodeURIComponent(archiveQuery(range)));
-  const ids = (list.messages || []).map(m => m.id);
-  if (!ids.length) return [];
-  const replayed = new Set(store.get("replayed", []));
-  const metas = [];
-  for (let i = 0; i < ids.length; i += 25)            // fetch subject lines in small batches
-    metas.push(...await Promise.all(ids.slice(i, i + 25).map(id =>
-      gmail("messages/" + id + "?format=metadata&metadataHeaders=Subject&metadataHeaders=From").catch(() => null))));
-  const rows = metas.filter(Boolean).map(m => {
-    const h = n => (m.payload.headers.find(x => x.name.toLowerCase() === n) || {}).value || "";
-    return { id: m.id, edition: (h("from").match(/^"?([^"<]+?)"?\s*</) || [, "TLDR"])[1], subject: h("subject"),
-             date: new Date(+m.internalDate).toDateString(), replayed: replayed.has(m.id) };
+async function snacksIssues(force) {
+  const c = store.get("snacksList", null);
+  if (c && !force && Date.now() - c.t < 3 * 3600e3) return c.issues;
+  if (!cfg.anthropic) return c ? c.issues : [];
+  const out = await claudeFetch({ max_tokens: 1500, messages: [{ role: "user", content:
+`Fetch ${SNACKS_LIST} and list the 15 most recent Robinhood Snacks newsletter issues shown on it. Dates there look like 11.23.26 (month.day.year).
+Return ONLY JSON: {"issues":[{"date":"YYYY-MM-DD","title":"issue title without emoji","url":"full URL of the issue"}]}` }] }, 1);
+  const issues = (parseJSON(out).issues || [])
+    .filter(i => /^\d{4}-\d{2}-\d{2}$/.test(i.date) && /^https:\/\/(sherwood\.news|snacks\.robinhood\.com)\//.test(i.url || ""))
+    .map(i => ({ id: "snacks:" + i.url.replace(/\/+$/, "").split("/").pop(), src: "snacks", name: "Snacks", date: i.date, title: i.title || "", url: i.url }));
+  if (issues.length) store.set("snacksList", { t: Date.now(), issues });
+  return issues.length ? issues : (c ? c.issues : []);
+}
+let ISSUES = [], discovering = null;
+function discover(force) {
+  const job = (async () => {
+    const [a, b] = await Promise.all([
+      cfg.sources.includes("tldr") ? tldrIssues() : [],
+      cfg.sources.includes("snacks") ? snacksIssues(force).catch(e => { console.warn("Snacks list failed", e); return (store.get("snacksList", { issues: [] })).issues; }) : []
+    ]);
+    if (job === discovering) { ISSUES = a.concat(b); renderDays(); }
+    return ISSUES;
+  })();
+  discovering = job;
+  return job;
+}
+function allDays() {
+  const m = new Map();
+  ISSUES.forEach(i => { if (!m.has(i.date)) m.set(i.date, []); m.get(i.date).push(i); });
+  return [...m.entries()].sort((a, b) => b[0].localeCompare(a[0])).map(([date, issues]) => ({ date, issues }));
+}
+const listened = () => store.get("listened", {});
+function dayState(d) {
+  const L = listened(), done = d.issues.filter(i => L[i.id]?.done).length, any = d.issues.filter(i => L[i.id]).length;
+  return done === d.issues.length ? "done" : any ? "part" : "new";
+}
+function pickDays() {
+  const all = allDays();
+  if (mode === "archive") { const i = Math.max(0, all.findIndex(d => d.date === $("archDate").value)); return all.slice(i, i + daysN); }
+  return all.filter(d => dayState(d) !== "done").slice(0, daysN);       // the most recent days you haven't finished
+}
+function estMinutes(days) {
+  const sec = days.reduce((s, d) => s + d.issues.reduce((t, i) => t + (i.src === "snacks" ? 70 : 10 * 26), 0), 0);
+  return Math.max(1, Math.round(sec / +cfg.speed / 60));
+}
+function renderDays() {
+  const all = allDays(), L = listened();
+  // strip of recent days
+  const strip = $("dayStrip"); strip.innerHTML = "";
+  if (!all.length) strip.innerHTML = `<span class="hint">${cfg.sources.length ? "No issues found yet." : "Pick TLDR, Snacks or Both."}</span>`;
+  const picked = new Set(pickDays().map(d => d.date));
+  all.slice(0, 14).forEach(d => {
+    const st = dayState(d), el = document.createElement("div");
+    el.className = "day " + st + (picked.has(d.date) ? " next" : "");
+    const [w, md] = [new Date(d.date + "T12:00:00").toLocaleDateString(undefined, { weekday: "short" }),
+                     new Date(d.date + "T12:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric" })];
+    el.innerHTML = `<span></span><b></b><i>${st === "done" ? "✓" : st === "part" ? "◐" : "·"}</i>`;
+    el.children[0].textContent = w; el.children[1].textContent = md;
+    el.title = d.issues.map(i => i.name + (L[i.id]?.done ? " ✓" : "")).join(", ");
+    strip.append(el);
   });
-  const want = mins <= 5 ? 3 : mins <= 10 ? 5 : 7;
-  const fresh = rows.filter(r => !r.replayed), pool = fresh.length >= want ? fresh : rows;
-  if (pool.length <= want) return pool.map(r => r.id);
-  try {
-    const out = await claude({ max_tokens: 400, messages: [{ role: "user", content:
-`Pick the ${want} newsletter emails most worth replaying for this listener, based on their subject lines (TLDR subjects list the top headlines; Snacks subjects are a punny title for one main story). Prefer variety across editions and topics, and avoid picking emails that obviously cover the same story.
-Listener interests: ${cfg.interests || "general AI and tech"}
-Listener's learned taste:
-${tasteSummary()}
-
-Emails:
-${pool.map(r => `${r.id} | ${r.date} | ${r.edition} | ${r.subject}`).join("\n")}
-
-Return ONLY JSON: {"ids":["..."]}` }] });
-    const picked = (parseJSON(out).ids || []).filter(id => pool.some(r => r.id === id)).slice(0, want);
-    if (picked.length) return picked;
-  } catch (e) { console.warn("archive pick failed, choosing at random", e); }
-  return pool.sort(() => Math.random() - 0.5).slice(0, want).map(r => r.id);
+  // archive date list
+  const sel = $("archDate"), keep = sel.value;
+  sel.innerHTML = "";
+  all.forEach(d => {
+    const o = document.createElement("option"), st = dayState(d);
+    o.value = d.date; o.textContent = `${dayLabel(d.date)}  ${st === "done" ? "✓" : st === "part" ? "◐" : ""}  (${d.issues.map(i => i.name).join(", ")})`;
+    sel.append(o);
+  });
+  if (keep && all.some(d => d.date === keep)) sel.value = keep;
+  // what the buttons will play
+  const p = pickDays();
+  $("durHint").textContent = !all.length ? "" : !p.length ? (mode === "archive" ? "" : "You're all caught up. Switch to Archive to replay a day.")
+    : `Plays ${p.map(d => dayLabel(d.date)).join(" + ")} · about ${estMinutes(p)} min`;
 }
 
 // ---------- Claude ----------
-async function claude(body, beta) {
+let lastStop = "";
+async function claudeRaw(body, beta) {
   const headers = { "x-api-key": cfg.anthropic, "anthropic-version": "2023-06-01", "content-type": "application/json",
                     "anthropic-dangerous-direct-browser-access": "true" };
   if (beta) headers["anthropic-beta"] = beta;
-  const r = await fetch("https://api.anthropic.com/v1/messages", { method: "POST", headers, body: JSON.stringify({ model: cfg.model, ...body }) });
-  if (!r.ok) throw new Error("Claude " + r.status + ": " + (await r.text()).slice(0, 300));
-  const j = await r.json();
+  for (let attempt = 0; ; attempt++) {
+    const r = await fetch("https://api.anthropic.com/v1/messages", { method: "POST", headers, body: JSON.stringify({ model: cfg.model, ...body }) });
+    if ((r.status === 429 || r.status === 529 || r.status === 503) && attempt < 3) {   // busy or rate-limited: wait and retry
+      await sleep(Math.max((+r.headers.get("retry-after") || 0) * 1000, 5000 * (attempt + 1))); continue;
+    }
+    if (!r.ok) throw new Error("Claude " + r.status + ": " + (await r.text()).slice(0, 300));
+    return r.json();
+  }
+}
+function finalText(j) {      // text written after the last web fetch (skips "I'll fetch that page" preambles)
+  let start = 0; j.content.forEach((c, i) => { if (c.type === "web_fetch_tool_result") start = i + 1; });
+  return j.content.slice(start).filter(c => c.type === "text").map(c => c.text).join("\n").trim();
+}
+async function claude(body, beta) {
+  const j = await claudeRaw(body, beta);
   lastStop = j.stop_reason;
   return j.content.filter(c => c.type === "text").map(c => c.text).join("\n").trim();
 }
-let lastStop = "";
+// Claude with its web_fetch tool: it reads the web page on Anthropic's side (phones can't read these sites directly).
+async function claudeFetch(body, maxUses) {
+  const tools = [{ type: "web_fetch_20250910", name: "web_fetch", max_uses: maxUses, max_content_tokens: 25000 }];
+  let messages = body.messages.slice(), j;
+  for (let k = 0; k < 3; k++) {
+    j = await claudeRaw({ ...body, tools, messages }, "web-fetch-2025-09-10");
+    if (j.stop_reason !== "pause_turn") break;
+    messages = messages.concat([{ role: "assistant", content: j.content }]);
+  }
+  lastStop = j.stop_reason;
+  const text = finalText(j);
+  const err = j.content.find(c => c.type === "web_fetch_tool_result" && c.content?.type === "web_fetch_tool_error");
+  if (err && !text.includes("{")) throw new Error("couldn't open the page (" + (err.content.error_code || "error") + ")");
+  return text;
+}
 function parseJSON(t) { const s = t.indexOf("{"), e = t.lastIndexOf("}"); return JSON.parse(t.slice(s, e + 1)); }
 // If a reply was cut off (or has one bad item), keep every story object that is complete and valid.
 function salvageStories(t) {
@@ -1725,42 +1724,76 @@ function salvageStories(t) {
   }
   return out;
 }
+function storiesFrom(out) {
+  try { const s = parseJSON(out).stories; if (Array.isArray(s)) return s.filter(o => o && o.headline && o.brief); } catch {}
+  return salvageStories(out);
+}
 
-async function extractStories(emails, heardTitles, archive) {
-  const maxStories = Math.min(40, Math.round(minutes * 60 / 25 * 2) + 4);
-  const prompt = `You are preparing a spoken news briefing for someone driving to work. Below are ${emails.length} ${archive ? "older newsletter emails the listener chose to replay" : "unread newsletter emails"} (TLDR tech digests and/or Robinhood Snacks business newsletters).
+const TLDR_RULES = `This is a TLDR newsletter issue. Each item has a title with a read time like "(5 minute read)", a link to the original article, and a short summary.
+- Make one story per real article, including the "Quick Links" section.
+- SKIP anything marked "(Sponsor)", job ads, "TLDR is hiring", referral/promo blurbs, and the header/footer.
+- "url" = the item's original article link (not a tldr.tech link). Leave the read time out of the headline.`;
+const SNACKS_RULES = `This is a Robinhood Snacks newsletter issue (business and markets). It is mostly ONE long article (headline plus several paragraphs).
+- Make that article ONE story whose brief captures the main argument and the key numbers; this brief may run up to 90 words.
+- The short intro paragraph can be its own story only if it is real news. Skip "What else we're Snackin'" link lists, the "Snack Fact", calendars, sponsor blocks and the footer.
+- "url" = the issue URL given above.`;
+async function extractIssue(iss, heardTitles) {
+  const prompt = `Fetch this newsletter issue and turn it into stories for a spoken news briefing for someone driving to work.
+Newsletter: ${iss.name}, ${dayLabel(iss.date, true)}
+URL: ${iss.url}
 
-Tasks:
-1. Extract every real news/article item. SKIP sponsors, ads, "(Sponsor)" items, job listings, referral/promo blurbs, and quick "links" with no summary.
-2. DEDUPLICATE: when the same underlying story/event appears in several emails (even with different headlines or angles), merge it into ONE story, combine the useful details, and list every email id it came from.
-3. Also drop any story that is the same as one in ALREADY_HEARD.
-   Article URLs: items reference links as [n]; resolve them from the "Links:" list at the bottom of the same email. Ignore tracking/advertise/sign-up links.
-   ROBINHOOD SNACKS format: each issue is mostly ONE long article (the headline in capitals plus several paragraphs) - make that ONE story whose brief captures the main argument and the key numbers; the brief may run up to 90 words. The short "Hey Snackers" intro paragraph can be its own story if it's real news (often it's a quip - skip if so). Skip the "What else we're Snackin'" link list (headlines only), the "Snack Fact", calendar items, sponsor blocks and legal footer. Snacks stories usually have no article URL - use "" for url.
-4. For each story write a "brief" to be read aloud: 45-70 words, conversational, plain spoken English, no URLs, no markdown, no "(3 minute read)". Start with the key fact. Spell out symbols (say "percent", "billion dollars").
-5. Score 1-10 for how interesting/important it is to this listener. Listener interests: ${cfg.interests || "general AI and tech"}. Boost stories that appeared in multiple emails.
+${iss.src === "snacks" ? SNACKS_RULES : TLDR_RULES}
 
-ALREADY_HEARD (titles from previous drives):
+For each story write a "brief" to be read aloud: 45-70 words, conversational, plain spoken English, no URLs, no markdown. Start with the key fact. Spell out symbols (say "percent", "billion dollars").
+Score each story 1-10 for how interesting it is to this listener. Listener interests: ${cfg.interests || "general AI, tech and business"}.
+Give each story exactly one "category" from this list (exact spelling): ${CATEGORIES.join(" | ")}
+and 2-3 short lowercase "tags" naming the specific subject (e.g. "humanoid robots", "data breach", "openai").
+Leave out any story that is the same news as one in ALREADY_HEARD.
+
+ALREADY_HEARD:
 ${heardTitles.length ? heardTitles.map(t => "- " + t).join("\n") : "(none)"}
 
-6. Give each story exactly one "category" from this fixed list (use the exact spelling): ${CATEGORIES.join(" | ")}
-   and 2-3 short lowercase "tags" naming the specific subject (e.g. "humanoid robots", "data breach", "openai", "ransomware", "gpu supply").
-
-LEARNED FROM THE LISTENER'S SKIP / GO-DEEPER BEHAVIOUR (weigh this heavily in "score"; it reflects real taste more than the stated interests):
+LEARNED FROM THE LISTENER'S SKIP / GO-DEEPER BEHAVIOUR (weigh this heavily in "score"):
 ${tasteSummary()}
 
-Return ONLY JSON: {"stories":[{"headline":"short headline, max 10 words","brief":"...","url":"primary article URL or empty","category":"one of the list","tags":["..."],"score":7,"email_ids":["..."]}]}
-Sort by score descending. Return at most ${maxStories} stories (the best ones, after merging duplicates); leave out the rest.
+Return ONLY JSON: {"stories":[{"headline":"short headline, max 10 words","brief":"...","url":"...","category":"...","tags":["..."],"score":7}]}`;
+  const out = await claudeFetch({ max_tokens: 8000, messages: [{ role: "user", content: prompt }] }, 1);
+  const stories = storiesFrom(out);
+  if (!stories.length && !/"stories"\s*:\s*\[\s*\]/.test(out)) throw new Error("no stories came back");
+  return stories.map(s => ({ ...s, issues: [iss.id], from: [iss.name], date: iss.date }));
+}
+// The same news often appears in several editions or days: merge those into one story.
+async function dedupe(stories) {
+  if (stories.length < 2) return stories;
+  const list = stories.map((s, i) => `${i} | ${s.from[0]} ${s.date} | ${s.headline} | ${s.brief.split(/\s+/).slice(0, 30).join(" ")}`).join("\n");
+  try {
+    const out = await claude({ max_tokens: 2000, messages: [{ role: "user", content:
+`These stories come from several newsletter issues. Find stories that cover the SAME underlying news event, even with different headlines or angles.
+Return ONLY JSON: {"groups":[[0,5],[3,9,12]]} listing only groups of 2 or more story numbers. Return {"groups":[]} if there are none.
 
-${emails.map(e => `=== EMAIL id=${e.id} | ${e.subject} | ${e.date}\n${e.text}`).join("\n\n")}`;
-  const out = await claude({ max_tokens: 20000, messages: [{ role: "user", content: prompt }] });
-  let stories;
-  try { stories = parseJSON(out).stories; } catch (e) { stories = null; }
-  if (!Array.isArray(stories) || !stories.length) {
-    stories = salvageStories(out);
-    console.warn("story list was " + (lastStop === "max_tokens" ? "cut off" : "malformed") + "; kept " + stories.length + " complete stories");
-    if (!stories.length) throw new Error(lastStop === "max_tokens" ? "Too many emails to summarize at once. Try again, or pick just TLDR or Snacks." : "Claude's story list came back garbled. Please try again.");
-  }
-  return rerank(stories);
+${list}` }] });
+    const drop = new Set();
+    for (const g of parseJSON(out).groups || []) {
+      const ix = (g || []).filter(i => Number.isInteger(i) && stories[i] && !drop.has(i));
+      if (ix.length < 2) continue;
+      ix.sort((a, b) => (+stories[b].score || 0) - (+stories[a].score || 0));
+      const keep = stories[ix[0]];
+      for (const i of ix.slice(1)) {
+        keep.issues = [...new Set([...keep.issues, ...stories[i].issues])];
+        keep.from = [...new Set([...keep.from, ...stories[i].from])];
+        drop.add(i);
+      }
+      keep.score = Math.min(10, (+keep.score || 5) + 1);             // in several newsletters = probably important
+    }
+    return stories.filter((_, i) => !drop.has(i));
+  } catch (e) { console.warn("dedupe failed; keeping all stories", e); return stories; }
+}
+async function pool(items, n, fn) {           // run fn over items, n at a time
+  const out = new Array(items.length); let next = 0;
+  await Promise.all(Array.from({ length: Math.min(n, items.length) }, async () => {
+    while (next < items.length) { const i = next++; out[i] = await fn(items[i], i); }
+  }));
+  return out;
 }
 
 // ---------- preference learning ----------
@@ -1825,22 +1858,16 @@ function renderTastes() {
 }
 
 async function deepDive(story) {
-  const src = (S?.emails || []).filter(e => (story.email_ids || []).includes(e.id)).map(e => `--- ${e.subject}\n${e.text}`).join("\n\n").slice(0, 20000);
   const ask = `The listener is driving and asked to go deeper on this story:
 Headline: ${story.headline}
 What they already heard: ${story.brief}
+From: ${(story.from || []).join(", ")}
 Article URL: ${story.url || "(none)"}
 
-The newsletter text it came from is below; use it first (for Robinhood Snacks the full analysis is right there).
-${story.url ? "If you need more detail, fetch the article. " : ""}Then write a spoken deep dive of about 200-260 words (~90 seconds): the key details, numbers, who's involved, why it matters, and what to watch next. Don't repeat the brief word-for-word. Plain spoken English only: no markdown, lists, URLs, or citations. If you couldn't read the article, say "I couldn't open the full article, but here's more context" and work from what you know. Output only the script.
-
-NEWSLETTER TEXT:
-${src || "(not available)"}`;
+${story.url ? "Fetch the article (for a Robinhood Snacks issue, find this story in it). " : ""}Then write a spoken deep dive of about 200-260 words (~90 seconds): the key details, numbers, who's involved, why it matters, and what to watch next. Don't repeat the brief word-for-word. Plain spoken English only: no markdown, lists, URLs, or citations. If you couldn't read the article, say "I couldn't open the full article, but here's more context" and work from what you know. Output only the script.`;
   if (story.url) {
-    try {
-      return await claude({ max_tokens: 1500, tools: [{ type: "web_fetch_20250910", name: "web_fetch", max_uses: 2 }],
-                            messages: [{ role: "user", content: ask }] }, "web-fetch-2025-09-10");
-    } catch (e) { console.warn("web_fetch failed, falling back", e); }
+    try { return await claudeFetch({ max_tokens: 1500, messages: [{ role: "user", content: ask }] }, 2); }
+    catch (e) { console.warn("web_fetch failed, falling back", e); }
   }
   return claude({ max_tokens: 1500, messages: [{ role: "user", content: ask }] });
 }
@@ -1921,19 +1948,20 @@ function fmt(s) { s = Math.max(0, Math.round(s)); return Math.floor(s / 60) + ":
 function elapsed() { return (S.pausedAt ? S.pausedAt : Date.now()) - S.start - S.pausedTotal; }
 function tick() {
   if (!S) return;
-  const e = elapsed() / 1000, b = S.budget;
-  $("pTime").textContent = fmt(e) + " / " + fmt(b);
-  $("pBar").style.width = Math.min(100, e / b * 100) + "%";
+  const left = S.stories.slice(Math.max(0, S.idx)).reduce((t, s) => t + estSec(s.brief) + 3, 0);
+  $("pTime").textContent = fmt(elapsed() / 1000) + (S.idx >= 0 && !S.over ? ` · ~${Math.max(1, Math.round(left / 60))} min left` : "");
+  $("pBar").style.width = (S.stories.length ? Math.min(100, (S.idx + 1) / S.stories.length * 100) : 0) + "%";
 }
 function card(tag, headline, src) { $("pTag").textContent = tag; $("pHeadline").textContent = headline; $("pSrc").textContent = src || ""; }
 function setMedia(title) {
   if (!("mediaSession" in navigator)) return;
   navigator.mediaSession.metadata = new MediaMetadata({ title, artist: "TLDR Drive", album: "Morning briefing" });
 }
+const joinWords = a => a.length < 2 ? (a[0] || "") : a.slice(0, -1).join(", ") + " and " + a[a.length - 1];
 
 async function start() {
   demo = demoMode;
-  const archive = !demo && mode === "archive", range = $("archRange").value;
+  const archive = !demo && mode === "archive";
   // unlock audio on iOS while we still have the user's tap
   audio.src = SILENT; audio.play().catch(() => {});
   unlockChime();
@@ -1941,29 +1969,42 @@ async function start() {
   try { S && S.wake?.release(); } catch {}
   let wake = null; try { wake = await navigator.wakeLock?.request("screen"); } catch {}
 
-  let emails = [], stories = [];
+  let stories = [], days = [], issues = [], failed = [];
   try {
-    if (demo) { stories = DEMO_STORIES; emails = []; }
+    if (demo) stories = DEMO_STORIES.map(s => ({ ...s }));
     else {
       if (!cfg.anthropic) { homeStatus("Add your Anthropic key in Settings first, or scan a setup QR code from another phone."); return; }
-      homeStatus("Signing in to Gmail…");
-      await ensureToken();
-      show("player"); card("Preparing", archive ? `Choosing emails from ${period(+range).short}…` : "Reading your unread newsletters…");
-      const ids = archive ? await pickArchiveEmails(range, minutes) : undefined;
-      if (archive && !ids.length) { show("home"); homeStatus(`No newsletter emails between ${period(+range).spoken}. Your emails may not go back that far yet.`); return; }
-      if (archive) card("Preparing", `Opening ${ids.length} emails from ${period(+range).short}…`);
-      emails = await fetchEmails(ids);
-      if (!emails.length) { show("home"); homeStatus("No unread newsletters. Nice. Switch to Archive to replay older ones."); return; }
-      card("Preparing", `Summarizing ${emails.length} emails and removing duplicates…`);
-      const heard = store.get("heard", []).filter(h => Date.now() - h.t < (archive ? 120 : 14) * 864e5);
-      stories = await extractStories(emails, heard.map(h => h.title), archive);
+      if (!cfg.sources.length) { homeStatus("Pick TLDR, Snacks or Both first."); return; }
+      homeStatus("Checking for new issues…");
+      await discover();
+      days = pickDays();
+      if (!days.length) { homeStatus(archive ? "No issues found for that date." : "You're all caught up: every recent day has been listened to. Switch to Archive to replay one."); return; }
+      issues = days.flatMap(d => d.issues);
+      homeStatus("");
+      show("player"); $("pNote").textContent = "";
+      card("Preparing", `Reading ${issues.length} ${issues.length === 1 ? "newsletter" : "newsletters"} from ${days.map(d => dayLabel(d.date)).join(", ")}…`, "This takes about 20–40 seconds.");
+      const heardTitles = store.get("heard", []).filter(h => Date.now() - h.t < (archive ? 0 : 14) * 864e5).map(h => h.title);
+      let done = 0;
+      const results = await pool(issues, 3, async iss => {
+        try { return await extractIssue(iss, heardTitles); }
+        catch (e) { console.warn("couldn't read", iss.url, e); failed.push({ iss, err: e.message }); return []; }
+        finally { done++; card("Preparing", `Reading newsletters… ${done} of ${issues.length}`, `${iss.name} · ${dayLabel(iss.date)}`); }
+      });
+      stories = results.flat();
+      if (failed.length === issues.length) throw new Error(failed[0].err);
+      if (issues.length > 1 && stories.length > 1) { card("Preparing", "Removing duplicate stories…"); stories = await dedupe(stories); }
+      stories = rerank(stories);
     }
   } catch (e) { show("home"); homeStatus("Couldn't start: " + e.message); return; }
-  if (!stories.length) { show("home"); homeStatus("No stories found in those emails."); return; }
+  if (!stories.length) {
+    if (!demo) markListened(issues, failed, [], []);
+    show("home"); renderDays(); homeStatus("No new stories in those days: you've already heard them all. They're now marked as listened."); return;
+  }
 
-  $("pNote").textContent = cfg.openai ? "" : "Using the phone's built-in voice. Add an OpenAI key in Settings for a natural voice.";
-  S = { budget: minutes * 60, start: Date.now(), pausedTotal: 0, pausedAt: 0, wake, emails, stories,
-        idx: -1, current: null, action: null, heard: [], skipped: [], cache: new Map(), over: false, archive, range };
+  $("pNote").textContent = (cfg.openai ? "" : "Using the phone's built-in voice. Add an OpenAI key in Settings for a natural voice.") +
+    (failed.length ? ` Couldn't open ${failed.map(f => f.iss.name + " " + dayLabel(f.iss.date)).join(", ")}; it stays unlistened.` : "");
+  S = { start: Date.now(), pausedTotal: 0, pausedAt: 0, wake, stories, days, issues, failed,
+        idx: -1, current: null, action: null, heard: [], skipped: [], cache: new Map(), over: false, archive };
   show("player");
   clearInterval(window._tick); window._tick = setInterval(tick, 500);
   run();
@@ -1977,10 +2018,11 @@ function prefetch(from) {           // keep the next 3 briefs synthesized ahead 
 }
 
 async function run() {
-  const n = S.stories.length;
-  const intro = (S.archive ? `This is your archive briefing, from ${period(+S.range).spoken}. ${n} ${n === 1 ? "story" : "stories"} from ${S.emails.length} ${S.emails.length === 1 ? "email" : "emails"}. `
-                           : `Good morning. ${n} ${n === 1 ? "story" : "stories"} in your inbox${S.emails.length ? " from " + S.emails.length + (S.emails.length === 1 ? " email" : " emails") : ""}. `) +
-                `I'll go through the top ones in about ${minutes} minutes. Tap skip any time, or go deeper on anything you like.`;
+  const n = S.stories.length, when = joinWords(S.days.map(d => dayLabel(d.date, true)));
+  const intro = (demo ? `This is the demo. ${n} stories. `
+                 : S.archive ? `This is your archive briefing for ${when}. ${n} ${n === 1 ? "story" : "stories"}. `
+                 : `Good morning. ${n} ${n === 1 ? "story" : "stories"} from ${when}. `) +
+                `Tap skip any time, or go deeper on anything you like.`;
   prefetch(0);
   card("Intro", "Your briefing", "");
   setMedia("Your briefing");
@@ -1988,12 +2030,10 @@ async function run() {
 
   for (let i = 0; i < n && !S.over; i++) {
     const st = S.stories[i];
-    const remaining = S.budget - elapsed() / 1000;
-    if (remaining < Math.min(estSec(st.brief), 25)) break;      // not enough time for another story
     S.idx = i; S.current = st; S.action = null;
     prefetch(i + 1);
-    const multi = (st.email_ids || []).length > 1 ? ` · in ${st.email_ids.length} emails` : "";
-    card(st.category || "Story", st.headline, `Story ${i + 1} of ${n}${multi}`);
+    const where = (st.from || []).join(" + ") + (st.date ? ` · ${dayLabel(st.date)}` : "");
+    card(st.category || "Story", st.headline, where);
     $("pCount").textContent = `Story ${i + 1} of ${n}`;
     setMedia(st.headline);
     await chime();
@@ -2058,6 +2098,18 @@ function onPause() {
     $("btnPause").textContent = "▶ Resume";
   }
 }
+// An issue counts as listened when every story from it was heard or skipped. Returns the days that are now fully done / partly heard.
+function markListened(issues, failed, stories, heard) {
+  const L = listened(), bad = new Set(failed.map(f => f.iss.id)), now = Date.now();
+  for (const iss of issues) {
+    if (bad.has(iss.id)) continue;
+    const mine = stories.filter(s => (s.issues || []).includes(iss.id));
+    const got = mine.filter(s => heard.includes(s)).length;
+    if (got === mine.length) L[iss.id] = { t: now, done: true };
+    else if (got && !L[iss.id]?.done) L[iss.id] = { t: now, done: false };
+  }
+  store.set("listened", L);
+}
 async function finish() {
   if (!S || S.over && S.finished) return;
   S.over = true; S.finished = true;
@@ -2071,21 +2123,13 @@ async function finish() {
   S.heard.forEach(s => heard.push({ title: s.headline, t: Date.now() }));
   store.set("heard", heard);
 
-  if (S.archive && S.heard.length) store.set("replayed", [...new Set([...store.get("replayed", []), ...S.emails.map(e => e.id)])].slice(-800));
-
-  // mark emails read
   let msg = "";
-  try {
-    if (!demo && !S.archive && cfg.mark !== "never") {
-      const covered = new Set(S.heard.flatMap(s => s.email_ids || []));
-      const unheardIds = new Set(S.stories.filter(s => !S.heard.includes(s)).flatMap(s => s.email_ids || []));
-      const ids = cfg.mark === "all" ? S.emails.map(e => e.id)
-                : S.emails.map(e => e.id).filter(id => covered.has(id) && !unheardIds.has(id));
-      await markRead(ids);
-      msg = `Marked ${ids.length} of ${S.emails.length} emails as read.` +
-            (ids.length < S.emails.length ? " The rest still have stories you haven't heard, so they stay unread for next time." : "");
-    }
-  } catch (e) { msg = "Couldn't mark emails as read: " + e.message; }
+  if (!demo) {
+    markListened(S.issues, S.failed, S.stories, S.heard);
+    const full = S.days.filter(d => dayState(d) === "done").map(d => dayLabel(d.date));
+    const part = S.days.filter(d => dayState(d) === "part").map(d => dayLabel(d.date));
+    msg = [full.length && "Listened: " + full.join(", ") + " ✓", part.length && "Partly heard (the rest is saved for next time): " + part.join(", ")].filter(Boolean).join("\n");
+  }
   try { S.wake?.release(); } catch {}
   $("doneStatus").textContent = msg;
   const L = {}; (S.learned || []).forEach(x => { const o = L[x.cat] ||= { up: 0, down: 0 }; x.w < 0 ? o.down++ : x.w > 1 && o.up++; });
@@ -2114,14 +2158,18 @@ $("btnDemo").onclick = () => { demoMode = true; start(); };
 
 // ---------- demo data ----------
 const DEMO_STORIES = [
-  { headline: "Demo: Open-weight model tops coding benchmark", category: "AI models & research", tags: ["coding"], score: 9, email_ids: ["a", "b"], url: "",
+  { headline: "Demo: Open-weight model tops coding benchmark", category: "AI models & research", tags: ["coding"], score: 9, from: ["TLDR AI", "TLDR Dev"], url: "",
     brief: "This is a demo story. A new open-weight model just topped a popular coding benchmark, and it showed up in both TLDR AI and TLDR Dev today, so it's merged into one story. Tap go deeper to hear more, or skip to move on." },
-  { headline: "Demo: Chipmaker announces new fab", category: "Chips & hardware", tags: ["fabs"], score: 7, email_ids: ["a"], url: "",
+  { headline: "Demo: Chipmaker announces new fab", category: "Chips & hardware", tags: ["fabs"], score: 7, from: ["TLDR"], url: "",
     brief: "Second demo story. A major chipmaker announced a new fabrication plant, aiming to start production in two years. Press skip now to see how quickly it jumps ahead." },
-  { headline: "Demo: Browser adds built-in AI agent", category: "AI products & agents", tags: ["browsers"], score: 6, email_ids: ["c"], url: "",
+  { headline: "Demo: Browser adds built-in AI agent", category: "AI products & agents", tags: ["browsers"], score: 6, from: ["TLDR"], url: "",
     brief: "Third demo story. A popular browser added a built-in AI agent that can fill out forms and book things for you, with a confirmation step before anything is submitted." }
 ];
 const DEMO_DEEP = st => `Here's the deeper version of: ${st.headline}. In the real app, Claude opens the full article and gives you about ninety seconds on the key details, the numbers, who's involved, and why it matters. Press skip whenever you've heard enough.`;
+
+// ---------- start up ----------
+renderDays();
+discover();
 </script>
 </body>
 </html>
