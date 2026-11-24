@@ -5,7 +5,7 @@ A one-page phone web app that reads the day's **TLDR** and **Robinhood Snacks** 
 **Live app:** https://jahmehs.github.io/tldr-drive/
 
 - **Pick what and how much.** Choose TLDR, Snacks or Both, then 1, 2 or 3 days. **New** plays the most recent days you haven't listened to yet. **Archive** replays any past date you pick.
-- **Listened days are tracked.** The *Recent days* strip shows ✓ for days you've finished and ◐ for days you partly heard. A day counts as listened once every story from it has been heard or skipped. If you stop early, the rest is saved for next time.
+- **Listened days are tracked.** The line under the day buttons shows which days will play next, and the Archive date list marks days ✓ (finished) or ◐ (partly heard). A day counts as listened once every story from it has been heard or skipped. If you stop early, the rest is saved for next time.
 - **No repeats.** A story that shows up in several editions or on several days is merged and played once. Stories you've already heard in the last 14 days are left out.
 - **Skip** jumps to the next story right away. **Go deeper** opens the full article and gives you about 90 seconds more on it.
 - **Your skips teach it what you like.** Each story gets a category and a few tags, and your reactions are scored:
