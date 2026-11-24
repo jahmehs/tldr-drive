@@ -1485,6 +1485,8 @@ function drawQR(text) {
     const o = JSON.parse(unb64u(m[1]));
     if (!confirm("Set up TLDR Drive on this phone with the shared keys and settings?")) return;
     SHARE_KEYS.forEach(k => { if (o[k] != null) cfg[k] = o[k]; });
+    // moving from the old address also brings what the app learned (skips, heard stories, replayed archive emails)
+    if (o.move) ["events", "heard", "replayed"].forEach(k => { if (Array.isArray(o.move[k])) store.set(k, o.move[k]); });
     store.set("cfg", cfg);
     setTimeout(() => homeStatus("All set. Keys and settings were copied to this phone."), 0);
   } catch (e) { setTimeout(() => homeStatus("That setup link looks damaged. Try scanning again."), 0); }
